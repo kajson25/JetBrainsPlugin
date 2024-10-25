@@ -1,21 +1,26 @@
 plugins {
-    kotlin("jvm") version "1.9.23"
+    id("org.jetbrains.intellij") version "1.15.0"  // Ensure version is compatible with your IntelliJ version
+    kotlin("jvm") version "1.8.10"  // Kotlin version for your plugin
 }
 
-group = "group.raf"
-version = "1.0-SNAPSHOT"
+intellij {
+    version.set("2023.2")  // Set to the IntelliJ version you're targeting
+    plugins.set(listOf("java", "Kotlin"))
+//    plugins.set(listOf("java", "Spring", "Kotlin"))  // Add Spring and Kotlin support
+}
+
+tasks {
+    patchPluginXml {
+        version.set("1.0.0")
+        sinceBuild.set("231")
+        untilBuild.set("233.*")
+    }
+}
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    testImplementation(kotlin("test"))
-}
-
-tasks.test {
-    useJUnitPlatform()
-}
-kotlin {
-    jvmToolchain(10)
+    implementation(kotlin("stdlib"))
 }
