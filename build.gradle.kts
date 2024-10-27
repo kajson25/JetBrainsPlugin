@@ -23,4 +23,5 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib"))
+    implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.8.10")
 }
