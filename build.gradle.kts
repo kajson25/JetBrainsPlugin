@@ -19,9 +19,12 @@ tasks {
 
 repositories {
     mavenCentral()
+    maven { url = uri("https://cache-redirector.jetbrains.com/intellij-dependencies") }
+    maven { url = uri("https://maven.pkg.jetbrains.space/public/p/compose/dev") }
 }
 
 dependencies {
-    implementation(kotlin("stdlib"))
+//    implementation(kotlin("stdlib"))
     implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.8.10")
+//    implementation("org.jetbrains.kotlin:kotlin-idea:1.8.10")
 }

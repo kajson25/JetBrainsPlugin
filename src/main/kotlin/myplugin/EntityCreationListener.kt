@@ -7,34 +7,77 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.*
 import com.intellij.openapi.vfs.VirtualFileManager
 import org.jetbrains.kotlin.util.removeSuffixIfPresent
+import java.io.File
 import java.io.IOException
 
 class EntityCreationListener(private val project: Project) : PsiTreeChangeAdapter() {
 
+    companion object {
+        private const val CONFIG_FILE_NAME = "entity-package-config.txt"
+
+        fun getConfigFile(project: Project): File {
+            val configDir = File(project.basePath, ".idea")
+            if (!configDir.exists()) configDir.mkdirs()
+            val configFile = File(configDir, CONFIG_FILE_NAME)
+            if (!configFile.exists()) {
+                configFile.writeText("# Enter package names (one per line) for entity generation\n")
+            }
+            return configFile
+        }
+
+        fun getConfiguredPackages(project: Project): List<String> {
+            val configFile = getConfigFile(project)
+            return if (configFile.exists()) {
+                configFile.readLines()
+                    .filter { it.isNotBlank() && !it.startsWith("#") }
+                    .flatMap { line -> line.split(",").map { it.trim() } } // Split by comma and trim whitespace
+                    .filter { it.isNotEmpty() }  // Remove any empty entries
+            } else {
+                emptyList()
+            }
+        }
+
+    }
+
     override fun childAdded(event: PsiTreeChangeEvent) {
         val psiElement = event.child
-        println("Element: ${psiElement?.text} -> ${psiElement?.containingFile?.name}")
+//        println("Element: ${psiElement?.text} -> ${psiElement?.containingFile?.name}")
+
+        val configuredPackages = getConfiguredPackages(project)
+        configuredPackages.forEach { println("Configured packages: $it") }
 
         when (psiElement) {
             is PsiJavaFile -> {
-                println("Java file creation detected.")
-                ApplicationManager.getApplication().invokeLater {
-                    psiElement.classes.forEach { psiClass ->
-                        showConfirmationAndGenerateClasses(psiClass)
+                val packageName = psiElement.packageName
+                println("Pakcage name: $packageName")
+                if (configuredPackages.any { packageName.matches(Regex(it)) }) {
+                    println("Java file creation detected.")
+                    ApplicationManager.getApplication().invokeLater {
+                        psiElement.classes.forEach { psiClass ->
+                            showConfirmationAndGenerateClasses(psiClass)
+                        }
                     }
                 }
             }
             is PsiFile -> {
-                if (psiElement.name.endsWith(".kt")) {
+                if (psiElement.name.endsWith(".kt") && configuredPackages.isNotEmpty()) {
+                    println("Usao u uslov za: ${psiElement.name}")
                     if(psiElement.name.contains("Repository") ||
                         psiElement.name.contains("Service") ||
                         psiElement.name.contains("Controller")) {
                         println("Detected wrong classes")
                         return
                     }
-                    println("Kotlin file creation detected.")
-                    ApplicationManager.getApplication().invokeLater {
-                        showConfirmationAndGenerateClasses(psiElement)
+                    println("psi leement: $psiElement")
+                    println("parent: ${psiElement.parent}")
+
+                    val ktPackage = psiElement.parent?.name
+                    println("Pakcage name: $ktPackage")
+                    if (configuredPackages.any { ktPackage?.matches(Regex(it)) == true }) {
+                        println("Kotlin file creation detected.")
+                        ApplicationManager.getApplication().invokeLater {
+                            showConfirmationAndGenerateClasses(psiElement)
+                        }
                     }
                 }
             }

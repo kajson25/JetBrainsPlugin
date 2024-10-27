@@ -8,4 +8,10 @@
         <!--        <fileTypeFactory implementation="myplugin.MyFileTypeFactory"/>-->
         <psi.treeChangeListener implementation="myplugin.EntityCreationListener"/>
     </extensions>
+    <actions>
+        <action id="myplugin.SetEntityPackage" class="myplugin.SetEntityPackageAction" text="Set Entity Packages" description="Set packages for entity generation">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+    </actions>
+
 </idea-plugin>
