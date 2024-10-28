@@ -3,13 +3,11 @@ package myplugin
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.vfs.VirtualFileManager
-import java.io.File
 
 class SetEntityPackageAction : AnAction() {
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
-        val configFile = EntityCreationListener.getConfigFile(project)
+        val configFile = getConfigFile(project)
 
         // Show input dialog
         val input = Messages.showInputDialog(

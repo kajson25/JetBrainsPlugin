@@ -12,46 +12,15 @@ import java.io.IOException
 
 class EntityCreationListener(private val project: Project) : PsiTreeChangeAdapter() {
 
-    companion object {
-        private const val CONFIG_FILE_NAME = "entity-package-config.txt"
-
-        fun getConfigFile(project: Project): File {
-            val configDir = File(project.basePath, ".idea")
-            if (!configDir.exists()) configDir.mkdirs()
-            val configFile = File(configDir, CONFIG_FILE_NAME)
-            if (!configFile.exists()) {
-                configFile.writeText("# Enter package names (one per line) for entity generation\n")
-            }
-            return configFile
-        }
-
-        fun getConfiguredPackages(project: Project): List<String> {
-            val configFile = getConfigFile(project)
-            return if (configFile.exists()) {
-                configFile.readLines()
-                    .filter { it.isNotBlank() && !it.startsWith("#") }
-                    .flatMap { line -> line.split(",").map { it.trim() } } // Split by comma and trim whitespace
-                    .filter { it.isNotEmpty() }  // Remove any empty entries
-            } else {
-                emptyList()
-            }
-        }
-
-    }
-
     override fun childAdded(event: PsiTreeChangeEvent) {
         val psiElement = event.child
-//        println("Element: ${psiElement?.text} -> ${psiElement?.containingFile?.name}")
 
         val configuredPackages = getConfiguredPackages(project)
-        configuredPackages.forEach { println("Configured packages: $it") }
 
         when (psiElement) {
             is PsiJavaFile -> {
                 val packageName = psiElement.packageName
-                println("Pakcage name: $packageName")
                 if (configuredPackages.any { packageName.matches(Regex(it)) }) {
-                    println("Java file creation detected.")
                     ApplicationManager.getApplication().invokeLater {
                         psiElement.classes.forEach { psiClass ->
                             showConfirmationAndGenerateClasses(psiClass)
@@ -61,20 +30,8 @@ class EntityCreationListener(private val project: Project) : PsiTreeChangeAdapte
             }
             is PsiFile -> {
                 if (psiElement.name.endsWith(".kt") && configuredPackages.isNotEmpty()) {
-                    println("Usao u uslov za: ${psiElement.name}")
-                    if(psiElement.name.contains("Repository") ||
-                        psiElement.name.contains("Service") ||
-                        psiElement.name.contains("Controller")) {
-                        println("Detected wrong classes")
-                        return
-                    }
-                    println("psi leement: $psiElement")
-                    println("parent: ${psiElement.parent}")
-
                     val ktPackage = psiElement.parent?.name
-                    println("Pakcage name: $ktPackage")
                     if (configuredPackages.any { ktPackage?.matches(Regex(it)) == true }) {
-                        println("Kotlin file creation detected.")
                         ApplicationManager.getApplication().invokeLater {
                             showConfirmationAndGenerateClasses(psiElement)
                         }
@@ -84,14 +41,14 @@ class EntityCreationListener(private val project: Project) : PsiTreeChangeAdapte
         }
     }
 
-private fun showConfirmationAndGenerateClasses(psiClass: Any) {
-    val className = when (psiClass) {
-        is PsiClass -> psiClass.name
-        is PsiFile -> psiClass.name
-        else -> return
-    } ?: return
+    private fun showConfirmationAndGenerateClasses(psiClass: Any) {
+        val className = when (psiClass) {
+            is PsiClass -> psiClass.name
+            is PsiFile -> psiClass.name.removeSuffixIfPresent(".kt")
+            else -> return
+        } ?: return
 
-        // Show confirmation dialog
+        // Show confirmation dialog to create main classes
         val response = Messages.showYesNoDialog(
             project,
             "You created the class $className. Do you want to generate the corresponding Repository, Service, and Controller classes?",
@@ -100,60 +57,113 @@ private fun showConfirmationAndGenerateClasses(psiClass: Any) {
         )
 
         if (response == Messages.YES) {
-            generateSupportingClasses(psiClass)
+            // Ask if the user wants interfaces
+            val interfaceResponse = Messages.showYesNoDialog(
+                project,
+                "Do you also want to create interfaces for the generated classes?",
+                "Generate Interfaces",
+                Messages.getQuestionIcon()
+            )
+            val createInterfaces = (interfaceResponse == Messages.YES)
+            generateSupportingClasses(psiClass, createInterfaces)
+            if (createInterfaces) {
+                generateInterfaces(psiClass)
+            }
         }
     }
 
-    private fun generateSupportingClasses(psiClass: Any) {
+    private fun generateSupportingClasses(psiClass: Any, createInterfaces: Boolean) {
         val className = when (psiClass) {
             is PsiClass -> psiClass.name
             is PsiFile -> psiClass.name.removeSuffixIfPresent(".kt")
             else -> return
         } ?: return
 
-        createClassInFolder("repository", "${className}Repository", psiClass)
+        // Adjust class names based on whether interfaces are created
+        val repoClassName = if (createInterfaces) "${className}RepositoryImplementation" else "${className}Repository"
+        val serviceClassName = if (createInterfaces) "${className}ServiceImplementation" else "${className}Service"
+        val controllerClassName = if (createInterfaces) "${className}ControllerImplementation" else "${className}Controller"
 
-        createClassInFolder("service", "${className}Service", psiClass)
-
-        createClassInFolder("controller", "${className}Controller", psiClass)
+        createClassInFolder("repository", repoClassName, psiClass, createInterfaces, "${className}Repository")
+        createClassInFolder("service", serviceClassName, psiClass, createInterfaces, "${className}Service")
+        createClassInFolder("controller", controllerClassName, psiClass, createInterfaces, "${className}Controller")
     }
 
-    private fun createClassInFolder(folderName: String, newClassName: String, psiClass: Any) {
-        val projectBaseDir = VirtualFileManager.getInstance().getFileSystem("file").findFileByPath(project.basePath!!)
-        println("ProjectBaseDir: $projectBaseDir")
+    private fun generateInterfaces(psiClass: Any) {
+        val className = when (psiClass) {
+            is PsiClass -> psiClass.name
+            is PsiFile -> psiClass.name.removeSuffixIfPresent(".kt")
+            else -> return
+        } ?: return
 
-         val srcDir: VirtualFile? = when (psiClass) {
+        // Create interfaces in respective folders
+        createInterfaceInFolder("repository", "${className}Repository", psiClass)
+        createInterfaceInFolder("service", "${className}Service", psiClass)
+        createInterfaceInFolder("controller", "${className}Controller", psiClass)
+    }
+
+    private fun createClassInFolder(folderName: String, className: String, psiClass: Any, implementsInterface: Boolean, interfaceName: String? = null) {
+        createFileInFolder(folderName, className, psiClass, isInterface = false, implementsInterface = implementsInterface, interfaceName = interfaceName)
+    }
+
+    private fun createInterfaceInFolder(folderName: String, interfaceName: String, psiClass: Any) {
+        createFileInFolder(folderName, interfaceName, psiClass, isInterface = true)
+    }
+
+    private fun createFileInFolder(folderName: String, fileName: String, psiClass: Any, isInterface: Boolean, implementsInterface: Boolean = false, interfaceName: String? = null) {
+        val projectBaseDir = VirtualFileManager.getInstance().getFileSystem("file").findFileByPath(project.basePath!!)
+        val srcDir: VirtualFile? = when (psiClass) {
             is PsiClass -> projectBaseDir?.findChild("src")?.findChild("main")?.findChild("java")?.findChild(folderName)
             is PsiFile -> projectBaseDir?.findChild("src")?.findChild("main")?.findChild("kotlin")?.findChild(folderName)
             else -> null
         }
-        println("Target directory: $srcDir")
 
-        // Prepare the file extension and content template based on the file type
-        val (fileExtension, newClassContent) = when (psiClass) {
-            is PsiClass -> "java" to """
-            package $folderName;
+        // Determine file extension and content template based on type and whether it’s an interface or a class with an implementation
+        val (fileExtension, fileContent) = when (psiClass) {
+            is PsiClass -> "java" to if (isInterface) {
+                """
+                package $folderName;
 
-            public class $newClassName {
-                // TODO: Add logic for $newClassName
+                public interface $fileName {
+                    // TODO: Define interface methods for $fileName
+                }
+                """.trimIndent()
+            } else {
+                val implementsClause = if (implementsInterface && interfaceName != null) "implements $interfaceName" else ""
+                """
+                package $folderName;
+
+                public class $fileName $implementsClause {
+                    // TODO: Add logic for $fileName
+                }
+                """.trimIndent()
             }
-        """.trimIndent()
-            is PsiFile -> "kt" to """
-            package $folderName
+            is PsiFile -> "kt" to if (isInterface) {
+                """
+                package $folderName
 
-            class $newClassName {
-                // TODO: Add logic for $newClassName
+                interface $fileName {
+                    // TODO: Define interface methods for $fileName
+                }
+                """.trimIndent()
+            } else {
+                val implementsClause = if (implementsInterface && interfaceName != null) ": $interfaceName" else ""
+                """
+                package $folderName
+
+                class $fileName $implementsClause {
+                    // TODO: Add logic for $fileName
+                }
+                """.trimIndent()
             }
-        """.trimIndent()
             else -> return
         }
 
         if (srcDir != null) {
             ApplicationManager.getApplication().runWriteAction {
                 try {
-                    // Create the new file with appropriate extension
-                    val newFile = srcDir.createChildData(this, "$newClassName.$fileExtension")
-                    newFile.getOutputStream(this).writer().use { it.write(newClassContent) }
+                    val newFile = srcDir.createChildData(this, "$fileName.$fileExtension")
+                    newFile.getOutputStream(this).writer().use { it.write(fileContent) }
                     println("Created file: ${newFile.path}")
                 } catch (e: IOException) {
                     e.printStackTrace()
@@ -163,5 +173,28 @@ private fun showConfirmationAndGenerateClasses(psiClass: Any) {
             println("Target directory $folderName not found")
         }
     }
+}
 
+const val CONFIG_FILE_NAME = "entity-package-config.txt"
+
+fun getConfigFile(project: Project): File {
+    val configDir = File(project.basePath, ".idea")
+    if (!configDir.exists()) configDir.mkdirs()
+    val configFile = File(configDir, CONFIG_FILE_NAME)
+    if (!configFile.exists()) {
+        configFile.writeText("# Enter package names (one per line) for entity generation\n")
+    }
+    return configFile
+}
+
+fun getConfiguredPackages(project: Project): List<String> {
+    val configFile = getConfigFile(project)
+    return if (configFile.exists()) {
+        configFile.readLines()
+            .filter { it.isNotBlank() && !it.startsWith("#") }
+            .flatMap { line -> line.split(",").map { it.trim() } }
+            .filter { it.isNotEmpty() }
+    } else {
+        emptyList()
+    }
 }
