@@ -83,10 +83,16 @@ class EntityCreationListener(private val project: Project) : PsiTreeChangeAdapte
         val repoClassName = if (createInterfaces) "${className}RepositoryImplementation" else "${className}Repository"
         val serviceClassName = if (createInterfaces) "${className}ServiceImplementation" else "${className}Service"
         val controllerClassName = if (createInterfaces) "${className}ControllerImplementation" else "${className}Controller"
+        val mapperClassName = "${className}Mapper"
+        val dtosRequestClassName = "${className}RequestDto"
+        val dtosResponseClassName = "${className}ResponseDto"
 
         createClassInFolder("repository", repoClassName, psiClass, createInterfaces, "${className}Repository")
         createClassInFolder("service", serviceClassName, psiClass, createInterfaces, "${className}Service")
         createClassInFolder("controller", controllerClassName, psiClass, createInterfaces, "${className}Controller")
+        createClassInFolder("mapper", mapperClassName, psiClass, createInterfaces, "")
+        createClassInFolder("dtos", dtosRequestClassName, psiClass, createInterfaces, "")
+        createClassInFolder("dtos", dtosResponseClassName, psiClass, createInterfaces, "")
     }
 
     private fun generateInterfaces(psiClass: Any) {
@@ -96,7 +102,6 @@ class EntityCreationListener(private val project: Project) : PsiTreeChangeAdapte
             else -> return
         } ?: return
 
-        // Create interfaces in respective folders
         createInterfaceInFolder("repository", "${className}Repository", psiClass)
         createInterfaceInFolder("service", "${className}Service", psiClass)
         createInterfaceInFolder("controller", "${className}Controller", psiClass)
@@ -112,66 +117,72 @@ class EntityCreationListener(private val project: Project) : PsiTreeChangeAdapte
 
     private fun createFileInFolder(folderName: String, fileName: String, psiClass: Any, isInterface: Boolean, implementsInterface: Boolean = false, interfaceName: String? = null) {
         val projectBaseDir = VirtualFileManager.getInstance().getFileSystem("file").findFileByPath(project.basePath!!)
-        val srcDir: VirtualFile? = when (psiClass) {
-            is PsiClass -> projectBaseDir?.findChild("src")?.findChild("main")?.findChild("java")?.findChild(folderName)
-            is PsiFile -> projectBaseDir?.findChild("src")?.findChild("main")?.findChild("kotlin")?.findChild(folderName)
-            else -> null
+        val languageFolder = if (psiClass is PsiClass) "java" else "kotlin"
+
+        var srcDir: VirtualFile? = null
+        ApplicationManager.getApplication().runWriteAction {
+            srcDir = createOrGetDirectory(projectBaseDir, listOf("src", "main", languageFolder, folderName))
         }
 
-        // Determine file extension and content template based on type and whether it’s an interface or a class with an implementation
-        val (fileExtension, fileContent) = when (psiClass) {
-            is PsiClass -> "java" to if (isInterface) {
-                """
+        if (srcDir != null) {
+            val (fileExtension, fileContent) = when (psiClass) {
+                is PsiClass -> "java" to if (isInterface) {
+                    """
                 package $folderName;
 
                 public interface $fileName {
                     // TODO: Define interface methods for $fileName
                 }
                 """.trimIndent()
-            } else {
-                val implementsClause = if (implementsInterface && interfaceName != null) "implements $interfaceName" else ""
-                """
+                } else {
+                    val implementsClause = if (implementsInterface && interfaceName != null) "implements $interfaceName" else ""
+                    """
                 package $folderName;
 
                 public class $fileName $implementsClause {
                     // TODO: Add logic for $fileName
                 }
                 """.trimIndent()
-            }
-            is PsiFile -> "kt" to if (isInterface) {
-                """
+                }
+                is PsiFile -> "kt" to if (isInterface) {
+                    """
                 package $folderName
 
                 interface $fileName {
                     // TODO: Define interface methods for $fileName
                 }
                 """.trimIndent()
-            } else {
-                val implementsClause = if (implementsInterface && interfaceName != null) ": $interfaceName" else ""
-                """
+                } else {
+                    val implementsClause = if (implementsInterface && interfaceName != null) ": $interfaceName" else ""
+                    """
                 package $folderName
 
                 class $fileName $implementsClause {
                     // TODO: Add logic for $fileName
                 }
                 """.trimIndent()
+                }
+                else -> return
             }
-            else -> return
-        }
 
-        if (srcDir != null) {
             ApplicationManager.getApplication().runWriteAction {
                 try {
-                    val newFile = srcDir.createChildData(this, "$fileName.$fileExtension")
+                    val newFile = srcDir!!.createChildData(this, "$fileName.$fileExtension")
                     newFile.getOutputStream(this).writer().use { it.write(fileContent) }
                     println("Created file: ${newFile.path}")
                 } catch (e: IOException) {
                     e.printStackTrace()
                 }
             }
-        } else {
-            println("Target directory $folderName not found")
         }
+    }
+
+    private fun createOrGetDirectory(baseDir: VirtualFile?, pathParts: List<String>): VirtualFile? {
+        var currentDir = baseDir
+        for (part in pathParts) {
+            currentDir = currentDir?.findChild(part) ?: currentDir?.createChildDirectory(this, part) // recursively making
+        }
+        return currentDir
     }
 }
 
