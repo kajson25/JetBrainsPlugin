@@ -1,13 +1,17 @@
 <idea-plugin>
-    <id>myplugin.springbootentitygenerator</id>
-    <name>Spring Boot Entity Generator</name>
+    <id>myplugin.layeredarchitecturegenerator</id>
+    <name>Layered Architecture Generator</name>
     <version>1.0.1</version>
     <vendor>Me</vendor>
 
     <extensions defaultExtensionNs="com.intellij">
         <!--        <fileTypeFactory implementation="myplugin.MyFileTypeFactory"/>-->
         <psi.treeChangeListener implementation="myplugin.EntityCreationListener"/>
+        <projectConfigurable instance="myplugin.PluginSettingsConfigurable"
+                             displayName="My Plugin Settings"
+                             nonDefaultProject="true"/>
     </extensions>
+
     <actions>
         <action id="myplugin.SetEntityPackage" class="myplugin.SetEntityPackageAction" text="Set Entity Packages" description="Set packages for entity generation">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
