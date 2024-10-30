@@ -1,0 +1,18 @@
+<h2>How to Use My Plugin</h2>
+<p>Welcome to My Plugin! This plugin helps you automatically generate supporting classes for entities in your project. It is compatible with java (preferably 17) and Kotlin</p>
+<h3>Quick Start</h3>
+<ol>
+    <li>When you create a new entity in your project, a prompt will appear asking if you would like to generate a <strong>Repository</strong>, <strong>Service</strong>, <strong>Controller</strong>, <strong>Dtos</strong>, <strong>Mapper</strong> class for it.</li>
+    <li>If you agree, the plugin will automatically generate the corresponding classes in their respective folders (<code>repository</code>, <code>service</code>, <code>controller</code>, <code>mapper</code>, <code>dtos</code>).</li>
+</ol>
+<h3>Configuration</h3>
+<p>To specify which packages should trigger this generation feature, you have two options:</p>
+<ol>
+    <li><strong>Tools &gt; Set Entity Packages</strong> - that's where you should input names of the packages (if there is more than one package you want to configure, please use ",")</li>
+    <li><strong>File &gt; Settings &gt; My Plugin Settings</strong> and just follow the written</li>
+</ol>
+<p>Note: if you do not have packages named "repository", "service", "controller", "mapper" and "dtos" with those exact names
+    the plugin will make them for you, and put newly generated classes and/or interfaces in them
+</p>
+<p>Also, make sure that when you specify packages for classes generation, it should be from java/kotlin package,
+    for example: com.example.mypackage</p>

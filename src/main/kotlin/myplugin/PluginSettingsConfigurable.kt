@@ -2,20 +2,23 @@ package myplugin
 
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
-import com.intellij.ui.dsl.builder.*
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBList
+import com.intellij.ui.dsl.builder.*
+import java.io.File
 import javax.swing.DefaultListModel
 import javax.swing.JComponent
-import java.io.File
 
-class PluginSettingsConfigurable(private val project: Project) : Configurable {
+class PluginSettingsConfigurable(
+    private val project: Project,
+) : Configurable {
     private val settingsState = PluginSettingsState.getInstance(project)
     private val settings = settingsState.settings
 
-    private val listModel = DefaultListModel<String>().apply {
-        settings.packagePatterns.forEach { addElement(it) }
-    }
+    private val listModel =
+        DefaultListModel<String>().apply {
+            settings.packagePatterns.forEach { addElement(it) }
+        }
     private val packagePatternList = JBList(listModel)
     private val enableInterfacesCheckbox = JBCheckBox("Enable Interface Generation", settings.enableInterfaces)
 
@@ -26,10 +29,11 @@ class PluginSettingsConfigurable(private val project: Project) : Configurable {
                     scrollCell(packagePatternList)
                 }
                 row("Add Pattern:") {
-                    val addPatternField = textField()
-                        .columns(20)
-                        .align(AlignX.FILL)
-                        .component
+                    val addPatternField =
+                        textField()
+                            .columns(20)
+                            .align(AlignX.FILL)
+                            .component
 
                     button("Add") {
                         val newPattern = addPatternField.text.trim()
@@ -53,10 +57,9 @@ class PluginSettingsConfigurable(private val project: Project) : Configurable {
         }
     }
 
-    override fun isModified(): Boolean {
-        return listModel.elements().toList() != settings.packagePatterns ||
-                enableInterfacesCheckbox.isSelected != settings.enableInterfaces
-    }
+    override fun isModified(): Boolean =
+        listModel.elements().toList() != settings.packagePatterns ||
+            enableInterfacesCheckbox.isSelected != settings.enableInterfaces
 
     override fun apply() {
         settings.packagePatterns = listModel.elements().toList().toMutableList()

@@ -10,12 +10,13 @@ class SetEntityPackageAction : AnAction() {
         val configFile = getConfigFile(project)
 
         // Show input dialog
-        val input = Messages.showInputDialog(
-            project,
-            "Enter package names (comma-separated) where entities should trigger class generation:",
-            "Configure Entity Packages",
-            Messages.getQuestionIcon()
-        )
+        val input =
+            Messages.showInputDialog(
+                project,
+                "Enter package names (comma-separated) where entities should trigger class generation:",
+                "Configure Entity Packages",
+                Messages.getQuestionIcon(),
+            )
 
         input?.let {
             // Write input to config file

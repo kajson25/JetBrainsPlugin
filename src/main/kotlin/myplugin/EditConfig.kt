@@ -9,8 +9,8 @@ import com.intellij.util.xmlb.XmlSerializerUtil
 
 // Define settings data structure
 data class PluginSettings(
-    var packagePatterns: MutableList<String> = mutableListOf("domain", "entities"),
-    var enableInterfaces: Boolean = true
+    var packagePatterns: MutableList<String> = mutableListOf("com.example.domain"),
+    var enableInterfaces: Boolean = true,
 )
 
 @Service(Service.Level.PROJECT)
@@ -25,7 +25,6 @@ class PluginSettingsState : PersistentStateComponent<PluginSettingsState> {
     }
 
     companion object {
-        fun getInstance(project: Project): PluginSettingsState =
-            project.getService(PluginSettingsState::class.java)
+        fun getInstance(project: Project): PluginSettingsState = project.getService(PluginSettingsState::class.java)
     }
 }
