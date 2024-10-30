@@ -1,4 +1,4 @@
-package myplugin
+package myplugin.core
 
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -7,9 +7,8 @@ import com.intellij.openapi.ui.Messages
 class SetEntityPackageAction : AnAction() {
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
-        val configFile = getConfigFile(project)
+        val configFile = ConfigManager.getConfigFile(project)
 
-        // Show input dialog
         val input =
             Messages.showInputDialog(
                 project,
@@ -19,7 +18,6 @@ class SetEntityPackageAction : AnAction() {
             )
 
         input?.let {
-            // Write input to config file
             configFile.writeText(it.lines().joinToString("\n"))
             Messages.showInfoMessage(project, "Configuration saved!", "Info")
         }

@@ -32,14 +32,14 @@
     </change-notes>
 
     <extensions defaultExtensionNs="com.intellij">
-        <psi.treeChangeListener implementation="myplugin.EntityCreationListener"/>
+        <psi.treeChangeListener implementation="myplugin.core.EntityCreationListener"/>
         <projectConfigurable instance="myplugin.PluginSettingsConfigurable"
                              displayName="My Plugin Settings"
                              nonDefaultProject="true"/>
     </extensions>
 
     <actions>
-        <action id="myplugin.SetEntityPackage" class="myplugin.SetEntityPackageAction" text="Set Entity Packages" description="Set packages for entity generation">
+        <action id="myplugin.SetEntityPackage" class="myplugin.core.SetEntityPackageAction" text="Set Entity Packages" description="Set packages for entity generation">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
     </actions>

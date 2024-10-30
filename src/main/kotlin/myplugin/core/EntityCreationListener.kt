@@ -1,6 +1,4 @@
-@file:Suppress("ktlint:standard:no-wildcard-imports")
-
-package myplugin
+package myplugin.core
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
@@ -9,7 +7,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.*
 import org.jetbrains.kotlin.util.removeSuffixIfPresent
-import java.io.File
 import java.io.IOException
 
 class EntityCreationListener(
@@ -18,7 +15,7 @@ class EntityCreationListener(
     override fun childAdded(event: PsiTreeChangeEvent) {
         val psiElement = event.child
 
-        val configuredPackages = getConfiguredPackages(project)
+        val configuredPackages = ConfigManager.getConfiguredPackages(project)
         if (configuredPackages.isEmpty()) {
             return
         }
@@ -58,7 +55,6 @@ class EntityCreationListener(
 
         println("Usao u funkciju: $psiFile")
 
-        // Show confirmation dialog to create main classes
         val response =
             Messages.showYesNoDialog(
                 project,
@@ -68,7 +64,6 @@ class EntityCreationListener(
             )
 
         if (response == Messages.YES) {
-            // Ask if the user wants interfaces
             val interfaceResponse =
                 Messages.showYesNoDialog(
                     project,
@@ -95,7 +90,6 @@ class EntityCreationListener(
                 else -> return
             }
 
-        // Adjust class names based on whether interfaces are created
         val repoClassName = if (createInterfaces) "${className}RepositoryImplementation" else "${className}Repository"
         val serviceClassName = if (createInterfaces) "${className}ServiceImplementation" else "${className}Service"
         val controllerClassName = if (createInterfaces) "${className}ControllerImplementation" else "${className}Controller"
@@ -157,18 +151,17 @@ class EntityCreationListener(
         implementsInterface: Boolean = false,
         interfaceName: String? = null,
     ) {
+        val directoryPath: String =
+            when (psiFile) {
+                is PsiJavaFile -> {
+                    psiFile.virtualFile.parent.path
+                }
 
-        val directoryPath: String = when (psiFile) {
-            is PsiJavaFile -> {
-                psiFile.virtualFile.parent.path
+                is PsiFile -> {
+                    psiFile.virtualFile.parent.path
+                }
+                else -> return
             }
-
-            is PsiFile -> {
-                psiFile.virtualFile.parent.path
-            }
-
-            else -> return
-        }
 
         val baseDir =
             VirtualFileManager
@@ -177,13 +170,13 @@ class EntityCreationListener(
                 .findFileByPath(directoryPath)
                 ?.parent ?: return
 
-
         val fullPathReplaced = directoryPath.replace("/", ".")
-        var packagePath = if (fullPathReplaced.contains("java")) {
-            fullPathReplaced.substringAfter("java.")
-        } else {
-            fullPathReplaced.substringAfter("kotlin.")
-        }
+        var packagePath =
+            if (fullPathReplaced.contains("java")) {
+                fullPathReplaced.substringAfter("java.")
+            } else {
+                fullPathReplaced.substringAfter("kotlin.")
+            }
         if (packagePath.contains(".")) {
             packagePath = packagePath.substringBeforeLast(".")
             packagePath = packagePath.plus(".$folderName")
@@ -242,7 +235,6 @@ class EntityCreationListener(
                             }
                 }
 
-            // Create the new file in the specified directory
             ApplicationManager.getApplication().runWriteAction {
                 try {
                     val newFile = targetDir!!.createChildData(this, "$fileName.$fileExtension")
@@ -264,30 +256,5 @@ class EntityCreationListener(
             currentDir = currentDir?.findChild(part) ?: currentDir?.createChildDirectory(this, part) // recursively making
         }
         return currentDir
-    }
-}
-
-const val CONFIG_FILE_NAME = "entity-package-config.txt"
-
-fun getConfigFile(project: Project): File {
-    val configDir = File(project.basePath, ".idea")
-    if (!configDir.exists()) configDir.mkdirs()
-    val configFile = File(configDir, CONFIG_FILE_NAME)
-    if (!configFile.exists()) {
-        configFile.writeText("# Enter package names (one per line) for entity generation\n")
-    }
-    return configFile
-}
-
-fun getConfiguredPackages(project: Project): List<String> {
-    val configFile = getConfigFile(project)
-    return if (configFile.exists()) {
-        configFile
-            .readLines()
-            .filter { it.isNotBlank() && !it.startsWith("#") }
-            .flatMap { line -> line.split(",").map { it.trim() } }
-            .filter { it.isNotEmpty() }
-    } else {
-        emptyList()
     }
 }
