@@ -1,18 +1,17 @@
 plugins {
-    id("org.jetbrains.intellij") version "1.15.0"  // Ensure version is compatible with your IntelliJ version
-    kotlin("jvm") version "1.8.10"  // Kotlin version for your plugin
+    id("org.jetbrains.intellij") version "1.15.0"
+    kotlin("jvm") version "1.8.10"
 }
 
 intellij {
-    version.set("2023.2")  // Set to the IntelliJ version you're targeting
+    version.set("2023.2") // Base version
     plugins.set(listOf("java", "Kotlin"))
-//    plugins.set(listOf("java", "Spring", "Kotlin"))  // Add Spring and Kotlin support
 }
 
 tasks {
     patchPluginXml {
         version.set("1.1.0")
-        sinceBuild.set("231")
+        sinceBuild.set("231") // Minimum compatible build version
         untilBuild.set("233.*")
     }
 }
@@ -24,7 +23,5 @@ repositories {
 }
 
 dependencies {
-//    implementation(kotlin("stdlib"))
     implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.8.10")
-//    implementation("org.jetbrains.kotlin:kotlin-idea:1.8.10")
 }

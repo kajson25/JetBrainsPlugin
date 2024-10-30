@@ -157,18 +157,16 @@ class EntityCreationListener(
         implementsInterface: Boolean = false,
         interfaceName: String? = null,
     ) {
-        val directoryPath: String?
-        val entityPackageName: String?
 
-        when (psiFile) {
+        val directoryPath: String = when (psiFile) {
             is PsiJavaFile -> {
-                directoryPath = psiFile.virtualFile.parent.path
-                entityPackageName = psiFile.packageName
+                psiFile.virtualFile.parent.path
             }
+
             is PsiFile -> {
-                directoryPath = psiFile.virtualFile.parent.path
-                entityPackageName = psiFile.parent?.name
+                psiFile.virtualFile.parent.path
             }
+
             else -> return
         }
 
@@ -179,16 +177,24 @@ class EntityCreationListener(
                 .findFileByPath(directoryPath)
                 ?.parent ?: return
 
+
+        val fullPathReplaced = directoryPath.replace("/", ".")
+        var packagePath = if (fullPathReplaced.contains("java")) {
+            fullPathReplaced.substringAfter("java.")
+        } else {
+            fullPathReplaced.substringAfter("kotlin.")
+        }
+        if (packagePath.contains(".")) {
+            packagePath = packagePath.substringBeforeLast(".")
+            packagePath = packagePath.plus(".$folderName")
+        } else {
+            packagePath = folderName
+        }
+
         val fullPathParts = listOf(folderName)
         var targetDir: VirtualFile? = null
         ApplicationManager.getApplication().runWriteAction {
             targetDir = createOrGetDirectory(baseDir, fullPathParts)
-        }
-        var entityPackage: String? = null
-        getConfiguredPackages(project).forEach {
-            if (it.contains(entityPackageName!!)) {
-                entityPackage = it.substringBeforeLast(".")
-            }
         }
 
         if (targetDir != null) {
@@ -198,7 +204,7 @@ class EntityCreationListener(
                         "java" to
                             if (isInterface) {
                                 """
-                                package $entityPackage.$folderName;
+                                package $packagePath;
                 
                                 public interface $fileName {
                                     // TODO: Define interface methods for $fileName
@@ -207,7 +213,7 @@ class EntityCreationListener(
                             } else {
                                 val implementsClause = if (implementsInterface && interfaceName != null) "implements $interfaceName" else ""
                                 """
-                                package $entityPackage.$folderName;
+                                package $packagePath;
                 
                                 public class $fileName $implementsClause {
                                     // TODO: Add logic for $fileName
@@ -218,7 +224,7 @@ class EntityCreationListener(
                         "kt" to
                             if (isInterface) {
                                 """
-                                package $entityPackage.$folderName
+                                package $packagePath
     
                                 interface $fileName {
                                     // TODO: Define interface methods for $fileName
@@ -227,7 +233,7 @@ class EntityCreationListener(
                             } else {
                                 val implementsClause = if (implementsInterface && interfaceName != null) ": $interfaceName" else ""
                                 """
-                                package $entityPackage.$folderName
+                                package $packagePath
                 
                                 class $fileName $implementsClause {
                                     // TODO: Add logic for $fileName
